@@ -7,3 +7,8 @@ A simple script to OCR images either from your clipboard or the most recent scre
 
 I run this with a simple autohotkey script and I have this file on my path, ALT S triggers it
 !s:: Run, MGUIDocr.pyw
+
+for this to work you must install tesseract
+https://github.com/UB-Mannheim/tesseract/wiki
+
+for the first run, i recommend running it in the console to see any error messages, afterwards you can run it however you want.
