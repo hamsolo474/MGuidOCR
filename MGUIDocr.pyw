@@ -1,6 +1,8 @@
 import os
 import tkinter as tk
-from tkinter import scrolledtext
+import argparse
+import subprocess
+import sys
 try:
     import PIL
     from PIL import ImageGrab
@@ -16,26 +18,26 @@ except ModuleNotFoundError:
 #import clipboard_monitor
 
 def fix(s):
-  s = s.replace('s','5')
-  s = s.replace('S','5')
-  s = s.replace('$','5')
-  s = s.replace('l','1') # this is lowercase L
-  s = s.replace('I','1')
-  s = s.replace('i','1')
-  s = s.replace('A','4')
-  s = s.replace('O','0')
-  s = s.replace('o','0')
-  s = s.replace('B','3')
-  s = s.replace(' ','')
-  s = s.replace('"','')
-  s = s.replace("'",'')
-  s = s.replace('¢','c')
-  s = s.replace('.','')
-  s = s.replace(':','')
-  s = s.replace('/','')
-  s = s.replace('*','')
-  s = s.lower()
-  return s
+    s = s.replace('s','5')
+    s = s.replace('S','5')
+    s = s.replace('$','5')
+    s = s.replace('l','1') # this is lowercase L
+    s = s.replace('I','1')
+    s = s.replace('i','1')
+    s = s.replace('A','4')
+    s = s.replace('O','0')
+    s = s.replace('o','0')
+    s = s.replace('B','3')
+    s = s.replace(' ','')
+    s = s.replace('"','')
+    s = s.replace("'",'')
+    s = s.replace('¢','c')
+    s = s.replace('.','')
+    s = s.replace(':','')
+    s = s.replace('/','')
+    s = s.replace('*','')
+    s = s.lower()
+    return s
 
 def validate_text(text, func, row=0):
     for i, char in enumerate(text):
@@ -76,50 +78,67 @@ def copyoriginal():
 def close_on_escape(event=None):
     root.destroy()
 
-try:
-    image = ImageGrab.grabclipboard()
-    extracted_text = pytesseract.image_to_string(image).strip()#.lower()
-except TypeError:
-    print('No image on clipboard, opening most recent image')
-    pathdir = os.sep.join([os.path.expanduser('~'),r'Pictures\Screenshots'])
-    lastscreenshot = os.sep.join([pathdir,sorted([i for i in os.listdir(pathdir) if '.png' in i.lower()])[-1]])
-    image = PIL.Image.open(lastscreenshot)
-    extracted_text = pytesseract.image_to_string(image).strip()#.lower()
-except pytesseract.pytesseract.TesseractNotFoundError as e:
-    print(e)
-    print(f"""You must install tesseract and add it to your path
-    https://github.com/UB-Mannheim/tesseract/wiki
-    """)
-    
-#extracted_text = '3aacf3ac-2d46-47d8-b021-630bbde24b42'
-if len(extracted_text) > 40:
-    print('Invalid image script not run')
-else:        
-    root = tk.Tk()
-    root.withdraw()
-    # Get mouse loc
-    x = root.winfo_pointerx()-300
-    y = root.winfo_pointery()-50
-    top = tk.Toplevel(root)
-    top.geometry(f"+{x}+{y}")  
-    
-    top.title("OCR Result")
-    top.attributes("-topmost", True)
-    top.bind("<Escape>", close_on_escape)
+parser = argparse.ArgumentParser(description="")
+parser.add_argument(
+    '--clipboard',
+    action='store_true',
+    help='Use clipboard input'
+)
+parser.add_argument(
+    '--path',
+    type=str,
+    help='Specify the file path'
+)
 
-    widgets = []
+if __name__ == "__main__":
+    args = parser.parse_args()
+    if args.clipboard:
+        image = ImageGrab.grabclipboard()
+    elif args.path == 'recent':
+        pathdir = os.sep.join([os.path.expanduser('~'),r'Pictures\Screenshots'])
+        lastscreenshot = os.sep.join([pathdir,sorted([i for i in os.listdir(pathdir) if '.png' in i.lower()])[-1]])
+        image = PIL.Image.open(lastscreenshot)
+    elif args.path:
+        image = PIL.Image.open(args.path)
+    else:
+        print("No Picture chosen")
+    try:
+        extracted_text = pytesseract.image_to_string(image).strip()#.lower()
+    except pytesseract.pytesseract.TesseractNotFoundError as e:
+        print(e)
+        print(f"""You must install tesseract and add it to your path
+        https://github.com/UB-Mannheim/tesseract/wiki
+        """)
+        
+    #extracted_text = '3aacf3ac-2d46-47d8-b021-630bbde24b42'
+    if len(extracted_text) > 40:
+        print('Invalid image script not run')
+    else:        
+        root = tk.Tk()
+        root.withdraw()
+        # Get mouse loc
+        x = root.winfo_pointerx()-300
+        y = root.winfo_pointery()-50
+        top = tk.Toplevel(root)
+        top.geometry(f"+{x}+{y}")  
+        
+        top.title("OCR Result")
+        top.attributes("-topmost", True)
+        top.bind("<Escape>", close_on_escape)
 
-    frame = tk.Frame(top)
-    frame.pack(padx=3, pady=3)
-    widgets.append(tk.Label(frame, text="First pass:", fg='black', font=('Arial', 16), width=0))
-    widgets[-1].grid(row=0, column=0, padx=2)
-    # Display each character as a label
-    validate_text(extracted_text, copyoriginal, 0)
-    fixed = fix(extracted_text)
-    add_to_clipboard(fixed)
+        widgets = []
 
-    if fixed != extracted_text:
-        widgets.append(tk.Label(frame, text="Fixed:", fg='black', font=('Arial', 16), width=0))
-        widgets[-1].grid(row=1, column=0, padx=2)
-        validate_text(fixed, copyfixed, row=1)
-    root.mainloop()
+        frame = tk.Frame(top)
+        frame.pack(padx=3, pady=3)
+        widgets.append(tk.Label(frame, text="First pass:", fg='black', font=('Arial', 16), width=0))
+        widgets[-1].grid(row=0, column=0, padx=2)
+        # Display each character as a label
+        validate_text(extracted_text, copyoriginal, 0)
+        fixed = fix(extracted_text)
+        add_to_clipboard(fixed)
+
+        if fixed != extracted_text:
+            widgets.append(tk.Label(frame, text="Fixed:", fg='black', font=('Arial', 16), width=0))
+            widgets[-1].grid(row=1, column=0, padx=2)
+            validate_text(fixed, copyfixed, row=1)
+        root.mainloop()
